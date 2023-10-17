@@ -38,7 +38,7 @@ def plot(ax, year, data):
     y = range(1, len(x) + 1)
 
     dates = matplotlib.dates.date2num(x)
-    ax.plot_date(dates, y)
+    ax.plot_date(dates, y, 'm.')
 
     update_axis_bounds(x)
 
@@ -49,6 +49,7 @@ def plot_rsvps(ax, year):
     raw = load_from_file(year)
 
     data = raw['result']['data']
+
     going = [x for x in data if x['status'] == 'GOING']
     maybe = [x for x in data if x['status'] == 'MAYBE']
 
