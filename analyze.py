@@ -8,20 +8,21 @@ plt.style.use('ggplot')
 bounds = [None, None]
 
 
-def load_from_file(year):
-    filename = f'{year}.json'
+def load_from_file(year, filename=None):
+    if filename is None:
+        filename = f'{year}.json'
 
     with open(filename) as f:
         return json.load(f)
 
 
-def get_date(date_string):
-    return datetime.datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%m/%d')
+def parse_date(date_string):
+    return datetime.datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
 
 
 def update_axis_bounds(data):
-    min_date = get_date(data[0])
-    max_date = get_date(data[-1])
+    min_date = parse_date(data[0]).strftime('%m/%d')
+    max_date = parse_date(data[-1]).strftime('%m/%d')
 
     bounds[0] = min_date if bounds[0] is None else min(bounds[0], min_date)
     bounds[1] = max_date if bounds[1] is None else max(bounds[1], max_date)
@@ -33,19 +34,7 @@ def set_axis_bounds(ax, year):
     ax.set_xlim([min_date, max_date])
 
 
-def plot(ax, year, data):
-    x = sorted([x['rsvpDate'] for x in data])
-    y = range(1, len(x) + 1)
-
-    dates = matplotlib.dates.date2num(x)
-    ax.plot_date(dates, y, 'm.')
-
-    update_axis_bounds(x)
-
-
 def plot_rsvps(ax, year):
-    ax.set_title(year)
-
     raw = load_from_file(year)
 
     data = raw['result']['data']
@@ -55,7 +44,35 @@ def plot_rsvps(ax, year):
 
     # hist = [x for x in data if not (len(x['rsvpHistory']) == 1 and x['rsvpHistory'][0]['status'] == "GOING")]
 
-    plot(ax, year, going)
+    x = sorted([x['rsvpDate'] for x in data])
+    y = range(1, len(x) + 1)
+
+    dates = matplotlib.dates.date2num(x)
+    ax.plot_date(dates, y, 'm.')
+
+    update_axis_bounds(x)
+
+
+def plot_blasts(ax, year):
+    blasts = load_from_file(year, f"{year}-blast.json") or []
+    for blast in blasts:
+        timestamp = parse_date(blast['sentAt']['timestampValue'])
+        ax.axvline(x=timestamp, color='b', label='BLAST', linestyle='dashed')
+
+
+def plot_comments(ax, year):
+    comments = load_from_file(year, f"{year}-comment.json") or []
+    for comment in comments:
+        timestamp = parse_date(comment['publishedAt']['timestampValue'])
+        ax.axvline(x=timestamp, color='g', label='COMMENT', linestyle='dashed')
+
+
+def plot(ax, year):
+    ax.set_title(year)
+
+    plot_rsvps(ax, year)
+    plot_blasts(ax, year)
+    plot_comments(ax, year)
 
 
 def main():
@@ -65,7 +82,7 @@ def main():
     fig.suptitle('Good Company Party Attendance')
 
     for year, ax in zip(years, axs):
-        plot_rsvps(ax, year)
+        plot(ax, year)
 
     for year, ax in zip(years, axs):
         set_axis_bounds(ax, year)
