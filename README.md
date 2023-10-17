@@ -2,14 +2,15 @@
 
 because partiful won't give me a fucking API
 
-https://twitter.com/partiful/status/1623361004326293514?lang=en
-
+<img width="100%" alt="Screen Shot 2023-10-16 at 9 22 45 PM" src="https://github.com/cooltoast/partiful-analytics/assets/3195381/4ad43eea-3899-4076-9c1c-5da47d1c2980">
+- https://twitter.com/partiful/status/1623361004326293514
 
 ## setup
 
 ### scrape data
-- chrome debugger tools to get `/getGuestsV2`
-- ```curl ... > YEAR.json```
+- open partiful.com
+- use chrome debugger tools to get `/getGuestsV2` output
+- save output to `YEAR.json`
 
 ### installation
 ```
