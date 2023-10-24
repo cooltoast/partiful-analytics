@@ -53,20 +53,20 @@ def plot_rsvps(ax, year, status, plot_color):
     raw = load_from_file(f"{year}.json")
 
     data = raw["result"]["data"]
+    data.sort(key=lambda d: d["rsvpDate"])
 
     rsvps = []
+    counts = []
+    count = 0
+
     for x in data:
         if x["status"] == status:
-            for _ in range(x["plusOneCount"] + 1):
-                rsvps.append(x["rsvpDate"])
-
-    # hist = [x for x in data if not (len(x['rsvpHistory']) == 1 and x['rsvpHistory'][0]['status'] == "GOING")]
-
-    rsvps.sort()
-    count = range(1, len(rsvps) + 1)
+            count += x["plusOneCount"] + 1
+            rsvps.append(x["rsvpDate"])
+            counts.append(count)
 
     dates = matplotlib.dates.date2num(rsvps)
-    ax.plot_date(dates, count, ".", color=plot_color, label=status.title())
+    ax.plot_date(dates, counts, ".", color=plot_color, label=status.title())
 
     update_axis_bounds(rsvps)
 
