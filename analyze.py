@@ -1,5 +1,6 @@
 import datetime
 import json
+from collections import OrderedDict
 
 import matplotlib.dates
 import matplotlib.pyplot as plt
@@ -8,14 +9,11 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 DATE_BOUNDS_FORMAT = "%m/%d"
 
 
-plt.style.use("ggplot")
+plt.style.use("Solarize_Light2")
 bounds = [None, None]
 
 
-def load_from_file(year, filename=None):
-    if filename is None:
-        filename = f"{year}.json"
-
+def load_from_file(filename):
     with open(filename) as f:
         return json.load(f)
 
@@ -33,50 +31,74 @@ def update_axis_bounds(data):
 
 
 def set_axis_bounds(ax, year):
-    min_date = datetime.datetime.strptime(bounds[0], DATE_BOUNDS_FORMAT).replace(year=year) - datetime.timedelta(days=2)
-    max_date = datetime.datetime.strptime(bounds[1], DATE_BOUNDS_FORMAT).replace(year=year) + datetime.timedelta(days=2)
+    bounds_buffer = datetime.timedelta(days=4)
+    min_date = datetime.datetime.strptime(bounds[0], DATE_BOUNDS_FORMAT).replace(year=year) - bounds_buffer
+    max_date = datetime.datetime.strptime(bounds[1], DATE_BOUNDS_FORMAT).replace(year=year) + bounds_buffer
     ax.set_xlim([min_date, max_date])
 
 
-def plot_rsvps(ax, year):
-    raw = load_from_file(year)
+def display_legend(fig, axs):
+    handles, labels = [], OrderedDict()
+
+    for ax in axs:
+        for h, l in zip(*ax.get_legend_handles_labels()):
+            if l not in labels:
+                labels[l] = None
+                handles.append(h)
+
+    fig.legend(handles, labels.keys(), loc="right")
+
+
+def plot_rsvps(ax, year, status, plot_color):
+    raw = load_from_file(f"{year}.json")
 
     data = raw["result"]["data"]
 
-    going = [x for x in data if x["status"] == "GOING"]
-    maybe = [x for x in data if x["status"] == "MAYBE"]
+    rsvps = []
+    for x in data:
+        if x["status"] == status:
+            for _ in range(x["plusOneCount"] + 1):
+                rsvps.append(x["rsvpDate"])
 
     # hist = [x for x in data if not (len(x['rsvpHistory']) == 1 and x['rsvpHistory'][0]['status'] == "GOING")]
 
-    x = sorted([x["rsvpDate"] for x in data])
-    y = range(1, len(x) + 1)
+    rsvps.sort()
+    count = range(1, len(rsvps) + 1)
 
-    dates = matplotlib.dates.date2num(x)
-    ax.plot_date(dates, y, "m.")
+    dates = matplotlib.dates.date2num(rsvps)
+    ax.plot_date(dates, count, ".", color=plot_color, label=status.title())
 
-    update_axis_bounds(x)
+    update_axis_bounds(rsvps)
 
 
 def plot_blasts(ax, year):
-    blasts = load_from_file(year, f"{year}-blast.json") or []
+    blasts = load_from_file(f"{year}-blast.json") or []
     for blast in blasts:
         timestamp = parse_date(blast["sentAt"]["timestampValue"])
-        ax.axvline(x=timestamp, color="b", label="BLAST", linestyle="dashed")
+        ax.axvline(x=timestamp, color="blue", label="Text Blast", linestyle="dashed")
 
 
 def plot_comments(ax, year):
-    comments = load_from_file(year, f"{year}-comment.json") or []
+    comments = load_from_file(f"{year}-comment.json") or []
     for comment in comments:
         timestamp = parse_date(comment["publishedAt"]["timestampValue"])
-        ax.axvline(x=timestamp, color="g", label="COMMENT", linestyle="dashed")
+        ax.axvline(x=timestamp, color="#5e0ba1", label="Comment", linestyle="dashed")
+
+
+def plot_event(ax, year):
+    event = load_from_file(f"{year}-event.json")
+    timestamp = parse_date(event["startDate"])
+    ax.axvline(x=timestamp, color="magenta", label="PARTY", linestyle="dashed")
 
 
 def plot(ax, year):
     ax.set_title(year)
 
-    plot_rsvps(ax, year)
+    plot_rsvps(ax, year, "GOING", "green")
+    plot_rsvps(ax, year, "MAYBE", "orange")
     plot_blasts(ax, year)
     plot_comments(ax, year)
+    plot_event(ax, year)
 
 
 def main():
@@ -90,6 +112,8 @@ def main():
 
     for year, ax in zip(years, axs):
         set_axis_bounds(ax, year)
+
+    display_legend(fig, axs)
 
     plt.show()
 
